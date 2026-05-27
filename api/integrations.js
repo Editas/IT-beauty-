@@ -17,22 +17,22 @@ const sendJson = (res, status, payload) => {
   res.end(JSON.stringify(payload));
 };
 
-const getAmoBaseUrl = () => {
-  const rawDomain = process.env.AMO_DOMAIN?.trim();
+const getIntegrationBaseUrl = () => {
+  const rawDomain = process.env.INTEGRATION_DOMAIN?.trim() || process.env.AMO_DOMAIN?.trim();
   if (!rawDomain) {
-    throw new Error("AMO_DOMAIN is not configured.");
+    throw new Error("INTEGRATION_DOMAIN is not configured.");
   }
   return `https://${rawDomain.replace(/^https?:\/\//, "").replace(/\/$/, "")}`;
 };
 
 const getAccessToken = async () => {
-  const domain = getAmoBaseUrl();
+  const domain = getIntegrationBaseUrl();
   const clientId = process.env.AMO_CLIENT_ID;
   const clientSecret = process.env.AMO_CLIENT_SECRET;
   const refreshToken = process.env.AMO_REFRESH_TOKEN;
 
   if (!clientId || !clientSecret || !refreshToken) {
-    throw new Error("amoCRM OAuth credentials are not configured.");
+    throw new Error("CRM OAuth credentials are not configured.");
   }
 
   const response = await fetch(`${domain}/oauth2/access_token`, {
@@ -49,18 +49,18 @@ const getAccessToken = async () => {
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`amoCRM auth failed: ${errorBody}`);
+    throw new Error(`CRM auth failed: ${errorBody}`);
   }
 
   const data = await response.json();
   if (!data.access_token) {
-    throw new Error("amoCRM auth returned no access token.");
+    throw new Error("CRM auth returned no access token.");
   }
 
   return data.access_token;
 };
 
-const fetchAmo = async (url, token, options = {}) => {
+const fetchCrm = async (url, token, options = {}) => {
   const response = await fetch(url, {
     ...options,
     headers: {
@@ -72,7 +72,7 @@ const fetchAmo = async (url, token, options = {}) => {
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(errorBody || `amoCRM request failed with status ${response.status}`);
+    throw new Error(errorBody || `CRM request failed with status ${response.status}`);
   }
 
   return response.json();
@@ -80,7 +80,7 @@ const fetchAmo = async (url, token, options = {}) => {
 
 const findContact = async (token, domain, query) => {
   const url = `${domain}/api/v4/contacts?query=${encodeURIComponent(query)}`;
-  const data = await fetchAmo(url, token);
+  const data = await fetchCrm(url, token);
   return data._embedded?.contacts?.[0] ?? null;
 };
 
@@ -90,7 +90,7 @@ const createContact = async (token, domain, name, tag) => {
     tags: [{ name: tag }],
   }];
 
-  const data = await fetchAmo(`${domain}/api/v4/contacts`, token, {
+  const data = await fetchCrm(`${domain}/api/v4/contacts`, token, {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -109,12 +109,12 @@ const ensureContact = async (token, domain, name, contact, tag) => {
 const createLead = async (token, domain, name, contactId, tag) => {
   const payload = [{
     name: `Заявка с сайта: ${name}`,
-    pipeline_id: Number(process.env.AMO_PIPELINE_ID),
+    pipeline_id: Number(process.env.INTEGRATION_PIPELINE_ID || process.env.AMO_PIPELINE_ID),
     _embedded: { contacts: [{ id: contactId }] },
     tags: [{ name: tag }],
   }];
 
-  const data = await fetchAmo(`${domain}/api/v4/leads`, token, {
+  const data = await fetchCrm(`${domain}/api/v4/leads`, token, {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -130,7 +130,7 @@ const createNote = async (token, domain, elementId, text) => {
     text,
   }];
 
-  await fetchAmo(`${domain}/api/v4/notes`, token, {
+  await fetchCrm(`${domain}/api/v4/notes`, token, {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -150,34 +150,34 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { name, contact, comment, source } = body;
-  if (!name || !contact) {
-    sendJson(res, 400, { error: "Имя и контакт обязательны для отправки заявки." });
+  const { name, contact, phone, salonName, salon, city, comment, source } = body;
+  const contactValue = (phone || contact || "").trim();
+  if (!name || !contactValue) {
+    sendJson(res, 400, { error: "Имя и телефон обязательны для отправки заявки." });
     return;
   }
 
-  const tag = process.env.AMO_TAG || "Сайт IT BEAUTY";
-  const pipelineId = process.env.AMO_PIPELINE_ID;
+  const tag = process.env.INTEGRATION_TAG || process.env.AMO_TAG || "Сайт IT BEAUTY";
+  const pipelineId = process.env.INTEGRATION_PIPELINE_ID || process.env.AMO_PIPELINE_ID;
   if (!pipelineId) {
-    sendJson(res, 500, { error: "AMO_PIPELINE_ID не настроен в окружении." });
+    sendJson(res, 500, { error: "INTEGRATION_PIPELINE_ID не настроен в окружении." });
     return;
   }
 
   try {
-    const domain = getAmoBaseUrl();
+    const domain = getIntegrationBaseUrl();
     const token = await getAccessToken();
 
-    const contactEntity = await ensureContact(token, domain, name, contact, tag);
+    const contactEntity = await ensureContact(token, domain, name, contactValue, tag);
     if (!contactEntity?.id) {
-      throw new Error("Не удалось создать или найти контакт в amoCRM.");
+      throw new Error("Не удалось создать или найти контакт в интеграционной системе (YCLIENTS/WaHelp).");
     }
 
     const leadEntity = await createLead(token, domain, name, contactEntity.id, tag);
     if (!leadEntity?.id) {
-      throw new Error("Не удалось создать сделку в amoCRM.");
+      throw new Error("Не удалось создать сделку в интеграционной системе (YCLIENTS/WaHelp).");
     }
-
-    const noteText = `Имя: ${name}\nКонтакт: ${contact}\nКомментарий: ${comment || "без комментариев"}\nИсточник: ${source || "landing_it_beauty"}`;
+    const noteText = `Имя: ${name}\nТелефон: ${contactValue}\nСалон: ${salonName || salon || ""}\nГород: ${city || ""}\nКомментарий: ${comment || "без комментариев"}\nИсточник: ${source || "landing_it_beauty"}`;
     await createNote(token, domain, leadEntity.id, noteText);
 
     sendJson(res, 200, {

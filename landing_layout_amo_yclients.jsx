@@ -1,6 +1,6 @@
 
-import React, { useState } from "react";
-import { ArrowRight, CheckCircle2, Bot, BarChart3, Settings, MessageCircle, ShieldCheck, Sparkles } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { ArrowRight, ArrowUp, CheckCircle2, Bot, BarChart3, Settings, MessageCircle, ShieldCheck, Sparkles } from "lucide-react";
 import { API_URL, FORM_SOURCE } from "./config";
 
 export default function LandingLayout() {
@@ -67,9 +67,16 @@ export default function LandingLayout() {
   ];
 
   const [formValues, setFormValues] = useState({ name: "", contact: "", comment: "" });
+  const [formErrors, setFormErrors] = useState({ name: "", contact: "", comment: "" });
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalValues, setModalValues] = useState({ name: "", phone: "", salon: "", city: "", comment: "" });
+  const [modalErrors, setModalErrors] = useState({});
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const scrollTimerRef = useRef(null);
 
   const companyInfo = {
     phone: "+7 (495) 210-30-40",
@@ -77,6 +84,34 @@ export default function LandingLayout() {
     address: "125009, г. Москва, ул. Ленина, д. 10",
     legal: "ООО «IT BEAUTY», ИНН 7700000000, ОГРН 1027700000000",
   };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const threshold = 250;
+      if (window.scrollY > threshold) {
+        if (!scrollTimerRef.current) {
+          scrollTimerRef.current = window.setTimeout(() => {
+            setShowScrollTop(true);
+            scrollTimerRef.current = null;
+          }, 2500);
+        }
+      } else {
+        if (scrollTimerRef.current) {
+          clearTimeout(scrollTimerRef.current);
+          scrollTimerRef.current = null;
+        }
+        setShowScrollTop(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (scrollTimerRef.current) {
+        clearTimeout(scrollTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -87,30 +122,36 @@ export default function LandingLayout() {
     const contact = formValues.contact.trim();
     const comment = formValues.comment.trim();
 
+    const errors = { name: "", contact: "", comment: "" };
+    let hasError = false;
+
     if (!name) {
-      setStatusType("error");
-      setStatusMessage("Укажите ваше имя.");
-      return;
+      errors.name = "Укажите ваше имя.";
+      hasError = true;
     }
 
     if (!contact) {
-      setStatusType("error");
-      setStatusMessage("Укажите телефон или e-mail.");
-      return;
+      errors.contact = "Укажите телефон или e-mail.";
+      hasError = true;
     }
 
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
     const isPhone = /\+?\d[\d\s\-()]{6,}\d/.test(contact);
 
-    if (!isEmail && !isPhone) {
-      setStatusType("error");
-      setStatusMessage("Введите корректный телефон или e-mail.");
-      return;
+    if (contact && !isEmail && !isPhone) {
+      errors.contact = "Введите корректный телефон или e-mail.";
+      hasError = true;
     }
 
     if (comment && comment.length < 5) {
+      errors.comment = "Комментарий должен содержать минимум 5 символов.";
+      hasError = true;
+    }
+
+    if (hasError) {
+      setFormErrors(errors);
       setStatusType("error");
-      setStatusMessage("Комментарий должен содержать минимум 5 символов.");
+      setStatusMessage("Пожалуйста, исправьте ошибки в форме.");
       return;
     }
 
@@ -136,8 +177,9 @@ export default function LandingLayout() {
       }
 
       setStatusType("success");
-      setStatusMessage("Спасибо! Заявка принята и будет передана в AmoCRM.");
+      setStatusMessage("Спасибо! Заявка принята и будет обработана нашей системой.");
       setFormValues({ name: "", contact: "", comment: "" });
+      setFormErrors({ name: "", contact: "", comment: "" });
     } catch (error) {
       setStatusType("error");
       setStatusMessage(error.message || "Произошла ошибка. Попробуйте снова позже.");
@@ -148,6 +190,11 @@ export default function LandingLayout() {
 
   const handleChange = (field, value) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
+    setFormErrors((prev) => ({ ...prev, [field]: "" }));
+    if (statusType === "error") {
+      setStatusMessage("");
+      setStatusType("");
+    }
   };
 
   const testimonials = [
@@ -171,9 +218,9 @@ export default function LandingLayout() {
   return (
     <div className="min-h-screen overflow-hidden bg-[#0B1020] text-white">
       <div className="pointer-events-none fixed inset-0 opacity-70">
-        <div className="absolute left-[-120px] top-[-120px] h-80 w-80 rounded-full bg-[#4FD1C5]/20 blur-3xl" />
-        <div className="absolute right-[-120px] top-20 h-96 w-96 rounded-full bg-[#8B5CF6]/25 blur-3xl" />
-        <div className="absolute bottom-0 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-[#4FD1C5]/10 blur-3xl" />
+        <div className="absolute left-[-120px] top-[-120px] h-80 w-80 rounded-full bg-[#4FD1C5]/20 blur-3xl animate-glow-slow" />
+        <div className="absolute right-[-120px] top-20 h-96 w-96 rounded-full bg-[#8B5CF6]/25 blur-3xl animate-glow-slow" />
+        <div className="absolute bottom-0 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-[#4FD1C5]/10 blur-3xl animate-float" />
       </div>
 
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0B1020]/80 backdrop-blur-xl">
@@ -192,23 +239,50 @@ export default function LandingLayout() {
             <a href="#services" className="hover:text-white">Экосистема</a>
             <a href="#process" className="hover:text-white">Процесс</a>
             <a href="#result" className="hover:text-white">Результат</a>
-            <a href="#amo" className="hover:text-white">AmoCRM</a>
             <a href="#reviews" className="hover:text-white">Отзывы</a>
             <a href="#faq" className="hover:text-white">FAQ</a>
             <a href="#contact" className="hover:text-white">Контакт</a>
           </nav>
 
-          <a href="#contact" className="rounded-2xl bg-white px-5 py-3 text-sm font-bold text-[#0B1020] transition hover:bg-white/90">
-            Подключить систему
-          </a>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              aria-label={mobileMenuOpen ? "Закрыть меню" : "Открыть меню"}
+              aria-expanded={mobileMenuOpen}
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              className="flex h-11 w-11 flex-col items-center justify-center gap-1 rounded-2xl border border-white/10 bg-white/5 p-2 text-white transition hover:bg-white/10 md:hidden"
+            >
+              <span className="block h-0.5 w-5 rounded-full bg-white" />
+              <span className="block h-0.5 w-5 rounded-full bg-white" />
+              <span className="block h-0.5 w-5 rounded-full bg-white" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="hidden rounded-2xl bg-white px-5 py-3 text-sm font-bold text-[#0B1020] transition hover:bg-white/90 md:inline-flex"
+            >
+              Подключить систему
+            </button>
+          </div>
+        </div>
+        <div className={`${mobileMenuOpen ? "block" : "hidden"} border-t border-white/10 bg-[#0B1020]/95 md:hidden`}>
+          <nav className="space-y-3 px-6 py-4 text-sm text-white/80">
+            <a href="#services" onClick={() => setMobileMenuOpen(false)} className="block rounded-2xl px-4 py-3 hover:bg-white/5 hover:text-white">Экосистема</a>
+            <a href="#process" onClick={() => setMobileMenuOpen(false)} className="block rounded-2xl px-4 py-3 hover:bg-white/5 hover:text-white">Процесс</a>
+            <a href="#result" onClick={() => setMobileMenuOpen(false)} className="block rounded-2xl px-4 py-3 hover:bg-white/5 hover:text-white">Результат</a>
+            
+            <a href="#reviews" onClick={() => setMobileMenuOpen(false)} className="block rounded-2xl px-4 py-3 hover:bg-white/5 hover:text-white">Отзывы</a>
+            <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="block rounded-2xl px-4 py-3 hover:bg-white/5 hover:text-white">FAQ</a>
+            <button type="button" onClick={() => { setModalOpen(true); setMobileMenuOpen(false); }} className="block rounded-2xl bg-white px-4 py-3 text-center font-bold text-[#0B1020] transition hover:bg-white/90">Подключить систему</button>
+          </nav>
         </div>
       </header>
 
       <main className="relative z-10">
         <section id="hero" className="px-6 py-24 md:py-32">
-          <div className="mx-auto grid max-w-7xl items-center gap-12 md:grid-cols-2">
-            <div>
-              <div className="mb-6 inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/65">
+          <div className="mx-auto grid max-w-7xl items-center gap-12 md:grid-cols-2 animate-hero-fade">
+              <div>
+                <div className="mb-6 inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/65 animate-pulse">
                 beauty-tech ecosystem
               </div>
 
@@ -217,13 +291,13 @@ export default function LandingLayout() {
               </h1>
 
               <p className="mt-7 max-w-xl text-lg leading-8 text-white/65">
-                IT BEAUTY объединяет YCLIENTS, WaHelp и AmoCRM в единую работающую экосистему для beauty-бизнеса. Заявки клиента из формы попадают в CRM, а процессы остаются управляемыми и прозрачными.
+                IT BEAUTY объединяет YCLIENTS, WaHelp и внутреннюю CRM в единую работающую экосистему для beauty-бизнеса. Заявки клиента из формы попадают в систему, а процессы остаются управляемыми и прозрачными.
               </p>
 
-              <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-                <a href="#contact" className="inline-flex items-center justify-center rounded-2xl bg-[#8B5CF6] px-7 py-4 font-bold text-white transition hover:bg-[#7C3AED]">
-                  Запросить внедрение <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+                <div className="mt-9 flex flex-col gap-4 sm:flex-row">
+                <button onClick={() => setModalOpen(true)} className="inline-flex items-center justify-center rounded-2xl bg-[#8B5CF6] px-7 py-4 font-bold text-white transition hover:bg-[#7C3AED]">
+                  Оставить заявку <ArrowRight className="ml-2 h-4 w-4" />
+                </button>
                 <a href="#services" className="inline-flex items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-7 py-4 font-bold text-white transition hover:bg-white/10">
                   Изучить экосистему
                 </a>
@@ -271,7 +345,7 @@ export default function LandingLayout() {
               {services.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.title} className="rounded-3xl border border-white/10 bg-white/[0.06] p-6">
+                  <div key={item.title} className="rounded-3xl border border-white/10 bg-white/[0.06] p-6 transition duration-700 ease-out hover:-translate-y-1 hover:shadow-[0_24px_48px_-28px_rgba(79,209,197,0.8)] animate-fade-up">
                     <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#8B5CF6]/20">
                       <Icon className="h-6 w-6 text-[#4FD1C5]" />
                     </div>
@@ -315,7 +389,7 @@ export default function LandingLayout() {
               <p className="mb-3 text-sm font-bold uppercase tracking-[0.25em] text-[#4FD1C5]">Процесс</p>
               <h2 className="text-4xl font-black md:text-5xl">Digital-поддержка, которая работает спокойно</h2>
               <p className="mt-5 text-lg leading-8 text-white/60">
-                Мы не создаём визуальный шум и не продаём сложность. Наша задача — дать владельцу ощущение, что система под контролем.
+                Мы не создаём визуальный шум и не продаём сложность. Наша задача — не создавать видимость автоматизации, а выстроить систему, которая реально контролирует клиентский поток и процессы бизнеса.
               </p>
             </div>
 
@@ -358,31 +432,7 @@ export default function LandingLayout() {
           </div>
         </section>
 
-        <section id="amo" className="px-6 py-20">
-          <div className="mx-auto max-w-7xl rounded-[2rem] border border-[#4FD1C5]/20 bg-white/[0.06] p-8 md:p-12">
-            <div className="grid gap-10 md:grid-cols-2">
-              <div>
-                <p className="mb-3 text-sm font-bold uppercase tracking-[0.25em] text-[#4FD1C5]">AmoCRM</p>
-                <h2 className="text-4xl font-black md:text-5xl">Интеграция заявок напрямую в AmoCRM</h2>
-                <p className="mt-5 text-lg leading-8 text-white/65">
-                  После заполнения формы клиентские данные автоматически передаются в AmoCRM. Мы настраиваем входящие лиды, привязку к сделкам и автоматические сценарии, чтобы заявка сразу попала к менеджеру.
-                </p>
-              </div>
-              <div className="grid gap-4">
-                <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-6">
-                  <p className="text-sm uppercase tracking-[0.2em] text-[#4FD1C5]">Что подключаем</p>
-                  <p className="mt-3 text-xl font-black">Приём лидов из формы</p>
-                  <p className="mt-3 text-white/65">Вся информация клиента сразу поступает в AmoCRM, без ручного ввода и потерь.</p>
-                </div>
-                <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-6">
-                  <p className="text-sm uppercase tracking-[0.2em] text-[#4FD1C5]">Как работает</p>
-                  <p className="mt-3 text-xl font-black">Форма → AmoCRM → менеджер</p>
-                  <p className="mt-3 text-white/65">Настраиваем вебхуки и интеграцию так, чтобы лиды появлялись в нужной воронке сразу после отправки.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        
 
         <section id="reviews" className="px-6 py-20">
           <div className="mx-auto max-w-7xl">
@@ -393,7 +443,7 @@ export default function LandingLayout() {
 
             <div className="grid gap-6 md:grid-cols-3">
               {testimonials.map((item) => (
-                <div key={item.author} className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-6">
+                <div key={item.author} className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-6 transition duration-700 ease-out hover:-translate-y-1 hover:shadow-[0_24px_48px_-28px_rgba(79,209,197,0.8)] animate-fade-up">
                   <p className="text-lg leading-8 text-white/70">“{item.text}”</p>
                   <div className="mt-6">
                     <p className="font-black">{item.author}</p>
@@ -424,77 +474,106 @@ export default function LandingLayout() {
         </section>
 
         <section id="contact" className="px-6 py-20">
-          <div className="mx-auto max-w-4xl rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 md:p-12">
-            <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-              <div>
-                <ShieldCheck className="mb-5 h-12 w-12 text-[#4FD1C5]" />
-                <h2 className="text-4xl font-black md:text-5xl">IT BEAUTY — это когда система работает, а владелец спокоен</h2>
-                <p className="mt-5 text-lg leading-8 text-white/65">
-                  Подключаем CRM, workflow, коммуникации и автоматизацию в единую устойчивую систему для beauty-бизнеса.
-                </p>
-                <div className="mt-8 space-y-3 text-white/70">
-                  <p>✓ Интеграция YCLIENTS + WaHelp</p>
-                  <p>✓ Автотриггеры для возврата клиентов</p>
-                  <p>✓ Передача заявок в AmoCRM</p>
-                  <p>✓ Аналитика, контроль и прозрачность</p>
-                </div>
-                <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.04] p-6 text-white/70">
-                  <p className="font-semibold text-white">Контакты</p>
-                  <p className="mt-3">Телефон: <a href="tel:+74952103040" className="text-white/80 hover:text-white">{companyInfo.phone}</a></p>
-                  <p className="mt-2">E-mail: <a href="mailto:hello@itbeauty.ru" className="text-white/80 hover:text-white">{companyInfo.email}</a></p>
-                  <p className="mt-2">Юр. адрес: {companyInfo.address}</p>
-                  <p className="mt-2">{companyInfo.legal}</p>
-                </div>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-4 rounded-3xl border border-white/10 bg-[#0B1020]/80 p-6">
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-white/80">Имя</label>
-                  <input
-                    name="name"
-                    value={formValues.name}
-                    onChange={(event) => handleChange("name", event.target.value)}
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-[#4FD1C5]"
-                    placeholder="Ваше имя"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-white/80">Телефон или e-mail</label>
-                  <input
-                    name="contact"
-                    value={formValues.contact}
-                    onChange={(event) => handleChange("contact", event.target.value)}
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-[#4FD1C5]"
-                    placeholder="Например +7 900 000 00 00 или email@example.com"
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-white/80">Комментарий</label>
-                  <textarea
-                    name="comment"
-                    value={formValues.comment}
-                    onChange={(event) => handleChange("comment", event.target.value)}
-                    className="h-28 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-[#4FD1C5]"
-                    placeholder="Опишите задачу или цель"
-                  />
-                </div>
-                <p className="text-sm text-white/50">Заявка может быть автоматически передана в AmoCRM для быстрого реагирования.</p>
-                {statusMessage && (
-                  <p className={`text-sm ${statusType === "error" ? "text-rose-400" : statusType === "success" ? "text-emerald-300" : "text-sky-300"}`}>
-                    {statusMessage}
-                  </p>
-                )}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="inline-flex w-full items-center justify-center rounded-2xl bg-[#8B5CF6] px-6 py-4 text-sm font-bold text-white transition hover:bg-[#7C3AED] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {loading ? "Отправка..." : "Оставить заявку"}
-                </button>
-              </form>
+          <div className="mx-auto max-w-4xl rounded-[2rem] bg-white/[0.04] p-8 md:p-12">
+            <div className="flex flex-col items-center text-center gap-6">
+              <ShieldCheck className="mb-5 h-12 w-12 text-[#4FD1C5]" />
+              <h2 className="text-4xl font-black md:text-5xl">IT BEAUTY — это когда система работает, а владелец спокоен</h2>
+              <p className="text-lg leading-8 text-white/65">
+                Подключаем workflow, коммуникации и автоматизацию в единую устойчивую систему для beauty-бизнеса.
+              </p>
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="rounded-2xl bg-[#8B5CF6] px-10 py-4 text-sm font-bold text-white transition hover:bg-[#7C3AED]"
+              >
+                Оставить заявку
+              </button>
             </div>
           </div>
         </section>
+
+        {modalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/60" onClick={() => setModalOpen(false)} />
+            <div role="dialog" aria-modal="true" className="relative z-60 w-full max-w-2xl rounded-2xl bg-[#0B1020] p-6 shadow-2xl">
+              <h3 className="mb-4 text-2xl font-black">Оставить заявку</h3>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const errors = {};
+                  if (!modalValues.name.trim()) errors.name = "Укажите имя.";
+                  if (!modalValues.phone.trim()) errors.phone = "Укажите телефон.";
+                  setModalErrors(errors);
+                  if (Object.keys(errors).length) return;
+                  setLoading(true);
+                  try {
+                    const resp = await fetch(API_URL, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        name: modalValues.name.trim(),
+                        phone: modalValues.phone.trim(),
+                        salonName: modalValues.salon.trim(),
+                        city: modalValues.city.trim(),
+                        comment: modalValues.comment.trim(),
+                        source: FORM_SOURCE,
+                      }),
+                    });
+                    const json = await resp.json();
+                    if (!resp.ok) throw new Error(json.error || "Ошибка отправки");
+                    setModalOpen(false);
+                    setModalValues({ name: "", phone: "", salon: "", city: "", comment: "" });
+                    setStatusType("success");
+                    setStatusMessage("Спасибо! Заявка принята.");
+                  } catch (err) {
+                    setStatusType("error");
+                    setStatusMessage(err.message || "Ошибка отправки заявки.");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="mb-2 block text-sm font-semibold">Имя</label>
+                  <input value={modalValues.name} onChange={(e) => setModalValues((p) => ({ ...p, name: e.target.value }))} className="w-full rounded-2xl border px-4 py-3 bg-white/5" />
+                  {modalErrors.name && <p className="mt-2 text-sm text-rose-400">{modalErrors.name}</p>}
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold">Телефон</label>
+                  <input value={modalValues.phone} onChange={(e) => setModalValues((p) => ({ ...p, phone: e.target.value }))} className="w-full rounded-2xl border px-4 py-3 bg-white/5" />
+                  {modalErrors.phone && <p className="mt-2 text-sm text-rose-400">{modalErrors.phone}</p>}
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold">Название салона</label>
+                  <input value={modalValues.salon} onChange={(e) => setModalValues((p) => ({ ...p, salon: e.target.value }))} className="w-full rounded-2xl border px-4 py-3 bg-white/5" />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold">Город</label>
+                  <input value={modalValues.city} onChange={(e) => setModalValues((p) => ({ ...p, city: e.target.value }))} className="w-full rounded-2xl border px-4 py-3 bg-white/5" />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold">Комментарий</label>
+                  <textarea value={modalValues.comment} onChange={(e) => setModalValues((p) => ({ ...p, comment: e.target.value }))} className="w-full rounded-2xl border px-4 py-3 bg-white/5 h-28" />
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" disabled={loading} className="rounded-2xl bg-[#8B5CF6] px-6 py-3 font-bold">{loading ? "Отправка..." : "Отправить"}</button>
+                  <button type="button" onClick={() => setModalOpen(false)} className="rounded-2xl border px-6 py-3">Отмена</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        {showScrollTop && (
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="fixed right-6 bottom-10 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white shadow-none ring-1 ring-white/10 transition duration-300 hover:bg-white/15 hover:text-[#E5E7EB] md:right-10"
+            aria-label="Наверх"
+          >
+            <ArrowUp className="h-5 w-5" />
+          </button>
+        )}
       </main>
 
       <footer className="relative z-10 border-t border-white/10 px-6 py-8">

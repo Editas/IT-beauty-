@@ -1,16 +1,16 @@
 # IT BEAUTY Landing
 
-Лендинг на React + Vite + Tailwind с серверной интеграцией в amoCRM.
+Лендинг на React + Vite + Tailwind с серверной интеграцией в YCLIENTS и WaHelp.
 
 ## Что реализовано
 
-- Одностраничный лендинг с блоками: hero, услуги, процесс, результат, AmoCRM, отзывы, FAQ, контакты
+- Одностраничный лендинг с блоками: hero, услуги, процесс, результат, CRM, отзывы, FAQ, контакты
 - Форма обратной связи с валидацией
-- Backend endpoint `api/amo.js` для передачи заявки в amoCRM
-- Создание контакта и сделки в amoCRM
+- Backend endpoint `api/integrations.js` для передачи заявки в интеграционные системы
+- Создание контакта и сделки в YCLIENTS и/или WaHelp (настройка интеграции)
 - Добавление тега `Сайт IT BEAUTY`
 - Конфигурация для деплоя на Vercel
-- Без прямых amoCRM-токенов во frontend
+- Без прямых CRM-токенов во frontend
 
 ## Установка
 
@@ -36,14 +36,14 @@ npm run build
 
 Скопируйте файл `.env.example` в `.env` и заполните реальные значения:
 
-- `VITE_API_URL` — endpoint для frontend (по умолчанию `/api/amo`)
+ - `VITE_API_URL` — endpoint для frontend (по умолчанию `/api/integrations`)
 - `VITE_FORM_SOURCE` — источник заявки (по умолчанию `landing_it_beauty`)
-- `AMO_DOMAIN` — домен аккаунта amoCRM, например `your-account.amocrm.ru`
-- `AMO_CLIENT_ID` — client_id для OAuth
-- `AMO_CLIENT_SECRET` — client_secret для OAuth
-- `AMO_REFRESH_TOKEN` — refresh token для amoCRM
-- `AMO_PIPELINE_ID` — ID воронки для создания сделки
-- `AMO_TAG` — тег для контакта и сделки
+ - `INTEGRATION_DOMAIN` / `AMO_DOMAIN` — домен интеграционной системы (YCLIENTS/WaHelp/amoCRM)
+ - `AMO_CLIENT_ID` — client_id для OAuth (если используется amoCRM)
+ - `AMO_CLIENT_SECRET` — client_secret для OAuth (если используется amoCRM)
+ - `AMO_REFRESH_TOKEN` — refresh token для CRM (если используется amoCRM)
+ - `INTEGRATION_PIPELINE_ID` / `AMO_PIPELINE_ID` — ID воронки для создания сделки
+ - `INTEGRATION_TAG` / `AMO_TAG` — тег для контакта и сделки
 
 ## Деплой на Vercel
 
@@ -54,12 +54,12 @@ npm run build
 
 ### Важное
 
-- Токены amoCRM должны храниться только на backend / в Vercel secrets.
+- Токены CRM должны храниться только на backend / в Vercel secrets.
 - В frontend передается только URL endpoint и источник заявки.
 
 ## Как работает backend
 
-1. Форма отправляет POST на `api/amo`.
+1. Форма отправляет POST на `api/integrations`.
 2. Backend получает access token через OAuth refresh token.
 3. Пытается найти существующий контакт.
 4. Если контакт не найден — создает новый.
